@@ -17,12 +17,12 @@ extension Task {
     /// - Parameter aggregate: A loading aggregate that keeps track of the loading state.
     /// - Returns: Returns the original task, for you to use as you like.
     public func track(_ aggregate: TaskLoadingAggregate) -> Self {
-        Task<Void, Never>.detached(priority: .high) {
-            aggregate.increment()
+        Task<Void, Never> {
+            await aggregate.increment()
 
             _ = try? await self.value
 
-            aggregate.decrement()
+            await aggregate.decrement()
         }
 
         return self

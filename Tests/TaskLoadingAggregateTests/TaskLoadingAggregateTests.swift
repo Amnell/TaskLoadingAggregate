@@ -2,6 +2,7 @@ import XCTest
 import Combine
 @testable import TaskLoadingAggregate
 
+@MainActor
 final class ConcurrencyActivityTests: XCTestCase {
     private var cancellables: Set<AnyCancellable>!
 
@@ -10,16 +11,16 @@ final class ConcurrencyActivityTests: XCTestCase {
         cancellables = []
     }
 
-    func testLoadingManagerLifecycle() {
-        let loadingManager = TaskLoadingAggregate()
+    func testLoadingAggregateLifecycle() {
+        let loadingAggregate = TaskLoadingAggregate()
 
-        addTeardownBlock { [weak loadingManager] in
-            XCTAssertNil(loadingManager, "Object should be deallocated. Detected memory leak.")
+        addTeardownBlock { [weak loadingAggregate] in
+            XCTAssertNil(loadingAggregate, "Object should be deallocated. Detected memory leak.")
         }
     }
 
     func testExample() async throws {
-        let loadingManager = TaskLoadingAggregate()
+        let loadingAggregate = TaskLoadingAggregate()
 
         var trueCount: Int = 0
         var falseCount: Int = 0
@@ -30,8 +31,9 @@ final class ConcurrencyActivityTests: XCTestCase {
         let trueCountExpectation = expectation(description: "isLoading should be true once")
         let falseCountExpectation = expectation(description: "isLoading should be false twice")
 
-        loadingManager.$isLoading
+        loadingAggregate.$isLoading
             .sink { isLoading in
+                XCTAssertTrue(Thread.isMainThread)
                 if isLoading {
                     trueCount += 1
 
@@ -59,29 +61,29 @@ final class ConcurrencyActivityTests: XCTestCase {
         let longRunningTask = task(delay: 1)
 
         // Start tracking both
-        longRunningTask.track(loadingManager)
-        longRunningThrowingTask.track(loadingManager)
+        longRunningTask.track(loadingAggregate)
+        longRunningThrowingTask.track(loadingAggregate)
 
         longRunningThrowingTask.cancel()
 
-        addTeardownBlock { [weak loadingManager] in
-            XCTAssertNil(loadingManager, "Object should be deallocated. Detected memory leak.")
+        addTeardownBlock { [weak loadingAggregate] in
+            XCTAssertNil(loadingAggregate, "Object should be deallocated. Detected memory leak.")
         }
 
-        await waitForExpectations(timeout: 4)
+        await fulfillment(of: [trueCountExpectation, falseCountExpectation], timeout: 4)
     }
 
     func testCancellingDecrementsLoading() async throws {
-        let loadingManager = TaskLoadingAggregate()
-        let task = task(delay: 5).track(loadingManager)
+        let loadingAggregate = TaskLoadingAggregate()
+        let task = task(delay: 5).track(loadingAggregate)
 
-        let isLoadingTrueExpectation = expectation(description: "Loading manager should be loading")
-        let isLoadingFalseExpectation = expectation(description: "Loading manager should NOT be loading")
+        let isLoadingTrueExpectation = expectation(description: "Loading aggregate should be loading")
+        let isLoadingFalseExpectation = expectation(description: "Loading aggregate should NOT be loading")
 
         Task {
             try await Task.sleep(nanoseconds: UInt64(0.01 * 1e+9))
 
-            if loadingManager.isLoading {
+            if loadingAggregate.isLoading {
                 isLoadingTrueExpectation.fulfill()
             }
 
@@ -89,12 +91,12 @@ final class ConcurrencyActivityTests: XCTestCase {
 
             try await Task.sleep(nanoseconds: UInt64(0.1 * 1e+9))
 
-            if !loadingManager.isLoading {
+            if !loadingAggregate.isLoading {
                 isLoadingFalseExpectation.fulfill()
             }
         }
 
-        await waitForExpectations(timeout: 2)
+        await fulfillment(of: [isLoadingTrueExpectation, isLoadingFalseExpectation], timeout: 2)
     }
 
     // MARK: - Helpers

@@ -8,10 +8,11 @@
 import Foundation
 import Combine
 
+@MainActor
 public class TaskLoadingAggregate: ObservableObject {
 
     // MARK: - Public
-
+    
     @Published public private(set) var isLoading: Bool = false
 
     // MARK: - Private
