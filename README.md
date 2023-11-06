@@ -28,6 +28,18 @@ Task {
 }.track(loadingAggregate)
 
 // You can now bind your UI or whatever to loadingAggregate's @Published isLoading property 🚀
+ActivityIndicator(isAnimating: loadingAggregate.isLoading, style: .large)
+
+// And as @Published is a `Published<Bool>` you can use Combine to do whatever:
+loadingAggregate.$isLoading
+    .sink { isLoading in
+        if isLoading {
+            doSomething()
+        } else {
+            doSomethingElse()
+        }
+    }
+    .store(in: &cancellables)
 ```
 
 #### Q: *Is this only for `Task`?*
