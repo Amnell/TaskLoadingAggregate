@@ -20,12 +20,12 @@ let loadingAggregate = TaskLoadingAggregate()
 // First task
 Task {
     try await doSomething()
-}.track(loadingManager)
+}.track(loadingAggregate)
 
 // Second task
 Task {
     try await doSomethingElse()
-}.track(loadingManager)
+}.track(loadingAggregate)
 
 // You can now bind your UI or whatever to loadingAggregate's @Published isLoading property 🚀
 ```
